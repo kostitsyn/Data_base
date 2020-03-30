@@ -1,0 +1,13 @@
+Создаём дамп базы данных example:
+
+mysqldump example > example.sql
+
+
+Создаём базу данных sample:
+
+mysqladmin create sample
+
+
+Записываем дамп в базу данных sample:
+
+mysql sample < sample.sql

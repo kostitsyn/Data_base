@@ -1,0 +1,8 @@
+Создаем базу данный example, в ней создаём таблицу users, в таблице создаём числовой столбец id и строковй name.
+
+create DATABASE example;
+use example;
+CREATE TABLE users (
+  id INT,
+  name VARCHAR(255)
+);
