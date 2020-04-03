@@ -1,0 +1,135 @@
+USE vk;
+
+SHOW tables;
+
+
+-- Редактируем таблицу "users"
+DESC users;
+SELECT * FROM users LIMIT 10;
+
+-- Урезаем строки в столбце "телефоны", т.к. был задан VARCHAR(120)
+UPDATE users SET 
+  phone = LEFT(phone, 10);
+SELECT * FROM users LIMIT 10;
+
+-- Увеличим допустимое количество символов до 14, и добавим к номеру 4 цифры
+ALTER TABLE users MODIFY COLUMN phone VARCHAR(14) NOT NULL UNIQUE;
+
+UPDATE users SET 
+  phone = CONCAT(phone, FLOOR(1000 + (RAND() * 8999)));
+SELECT * FROM users;
+
+
+-- Редактируем таблицу "profiles"
+DESC profiles;
+SELECT * FROM profiles;
+
+-- Редакируем столбец "время обновления"
+UPDATE profiles SET 
+  updated_at = NOW() WHERE created_at > updated_at;
+
+
+-- Редактируем таблицу "messages"
+SHOW tables;
+INSERT messages;
+SELECT * FROM messages;
+
+-- Случайно разобъём номера ползователей-отправителей
+-- Перед этим проверим сколько пользователей создано
+SELECT COUNT(*) FROM users;
+UPDATE messages SET from_user_id = FLOOR(1 + RAND() * 149);
+
+-- Производим проверку отправки сообщения пользователем самому себе
+UPDATE messages SET 
+  to_user_id = FLOOR(1 + RAND() * 149) WHERE from_user_id = to_user_id;
+SELECT * FROM messages;
+
+-- Редактируем таблицу "media_types"
+SHOW tables;
+DESC media_types;
+SELECT * FROM media_types;
+-- Всё верно, оставляем
+
+
+-- Редактируем таблицу "media"
+SHOW tables;
+desc media;
+SELECT * FROM media;
+
+-- Случайно разобъём значения столбца "media_type_id"
+-- Перед этим проверим сколько значений в таблице "media_types"
+SELECT COUNT(*) FROM media_types;
+UPDATE media SET 
+  media_type_id = FLOOR(1 + RAND() * 2);
+ 
+-- Случайно разобъём значения столбца "user_id"
+UPDATE media SET 
+  user_id = FLOOR(1 + RAND() * 149);
+
+ -- Генерируем столбец "file_path"
+ UPDATE media SET 
+   file_path = CONCAT('http://onedrive/vk/file_', FLOOR(1000 + RAND() * 8999));
+
+-- Редактируем столбец "size"
+UPDATE media SET 
+   size = FLOOR(9999 + RAND() * 899999)
+   WHERE size < 5000;
+  
+-- Редактируем столбец "metadata"
+UPDATE media SET metadata = CONCAT('{"owner":"',
+  (SELECT CONCAT(first_name, ' ', last_name) FROM users WHERE id = user_id),
+  '"}');
+ALTER TABLE media MODIFY COLUMN metadata JSON;
+
+
+-- Редактируем таблицу "friendship"
+desc friendship;
+SELECT * FROM friendship;
+
+-- Производим проверку дружбы пользователя с самим собой
+UPDATE friendship SET 
+  friend_id = FLOOR(1 + RAND() * 149) WHERE user_id = friend_id;
+
+ -- Случайно разобъём значения столбца "user_id"
+UPDATE media SET 
+  user_id = FLOOR(1 + RAND() * 3);
+
+
+-- Редактируем таблицу "friendship_statuses"
+SELECT * FROM friendship_statuses;
+
+-- Количество статусов верное, но значения не верные, удаляем
+TRUNCATE friendship_statuses;
+
+-- Вставляем нужные значения
+INSERT INTO friendship_statuses (name) VALUES
+  ('Accepted'),
+  ('Requested'),
+  ('Rejected');
+ 
+ -- Приводим в соответствие временные метки
+UPDATE friendship SET 
+  confirmed_at = NOW() WHERE requested_at > confirmed_at;
+ 
+ 
+-- Редактируем таблицу "communities"
+DESC communities;
+SELECT * FROM communities;
+
+-- Сокращаем значения групп до 20
+DELETE FROM communities WHERE id > 20;
+
+-- Добавляем столбец "created_at"
+ALTER TABLE communities ADD COLUMN created_at DATETIME;
+UPDATE communities SET            
+  created_at = FROM_UNIXTIME(RAND() * (1325275200 - 1293825600) + 1293825600);
+  
+ 
+-- Редактируем таблицу "communities_users"
+DESC communities_users;
+SELECT * FROM communities_users;
+
+-- Создаём новый диапазон для "сommunity_id" и случайная разбивка столбца "user_id"
+UPDATE communities_users SET
+  community_id = FLOOR(1 + RAND() * 20),
+  user_id = FLOOR(1 + RAND() * 150);
