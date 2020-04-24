@@ -46,14 +46,6 @@ CREATE INDEX messages_from_user_id_to_user_id_idx
           ON messages(from_user_id, to_user_id);
      
 
-    
--- Таблица posts
-SELECT * FROM posts;
-
--- Добавляем индекс к полю author_id
-CREATE INDEX posts_author_id_idx ON posts(author_id);
-
-
 
 -- Таблица profiles
 SELECT * FROM profiles;
@@ -95,46 +87,60 @@ CREATE UNIQUE INDEX phone_idx ON users(phone);
 -- всего пользователей в системе
 -- отношение в процентах (количество пользователей в группе / всего пользователей в системе) * 100
 
-SELECT * FROM communities;
-SELECT * FROM communities_users;
-SELECT * FROM profiles;
-SELECT * FROM users;
-SELECT (SELECT name FROM communities WHERE communities.id = communities_users.community_id) AS name, 
-COUNT(user_id) AS total FROM communities_users GROUP BY community_id;
-
+            
 SELECT DISTINCT communities.name,
-  AVG(communities_users.user_id) OVER() AS avg_num_users,
-  MAX(profiles.birthday) OVER(PARTITION BY communities_users.community_id) AS yongest_user,
-  MIN(profiles.birthday) OVER(PARTITION BY communities_users.community_id) AS oldest_user,
-  COUNT(communities_users.user_id) OVER(PARTITION BY communities_users.community_id) AS users_in_com,
-  COUNT(users.id) OVER() AS total_users,
-  COUNT(communities_users.user_id) OVER(PARTITION BY communities_users.community_id) / COUNT(users.id) OVER() * 100 AS '%%'
+  (SELECT SUM(avg_part) AS avg_num_users FROM
+(SELECT DISTINCT COUNT(communities_users.user_id) OVER(PARTITION BY communities_users.community_id) / 
+(SELECT COUNT(*) FROM communities) AS avg_part 
            FROM communities
-           JOIN communities_users
+      LEFT JOIN communities_users
+             ON communities.id = communities_users.community_id) AS `some`) AS avg_num_users,
+  MAX(profiles.birthday) OVER w AS yongest_user,
+  MIN(profiles.birthday) OVER w AS oldest_user,
+  COUNT(communities_users.user_id) OVER w AS users_in_com,
+  COUNT(users.id) OVER() AS total_users,
+  COUNT(communities_users.user_id) OVER w / COUNT(users.id) OVER() * 100 AS '%%'
+           FROM communities
+      LEFT JOIN communities_users
              ON communities.id = communities_users.community_id
       LEFT JOIN profiles
              ON profiles.user_id = communities_users.user_id
       LEFT JOIN users
-             ON users.id = profiles.user_id;
-            
+             ON users.id = profiles.user_id
+         WINDOW w AS (PARTITION BY communities_users.community_id);
+        
 
+             
+
+          
+ 
+                                  
             
-SELECT DISTINCT communities.name, users.id
-           FROM communities
-         RIGHT JOIN communities_users
-             ON communities.id = communities_users.community_id
-     RIGHT JOIN users
-             ON users.id = communities_users.user_id
-      LEFT JOIN profiles
-             ON profiles.user_id = communities_users.user_id;
+-- Третье задание
             
-            
-           
-            
-SELECT DISTINCT 
-  COUNT(users.id) OVER() AS total_users
-           FROM communities_users
-     RIGHT JOIN users
-             ON users.id = communities_users.user_id;
-            
-SELECT user_id FROM communities_users GROUP BY user_id;
+SELECT users.id,
+COUNT(DISTINCT messages.id) AS total_messages,
+COUNT(DISTINCT likes.id) AS total_likes,
+COUNT(DISTINCT media.id) AS activity
+FROM users
+LEFT JOIN messages
+ON users.id = messages.from_user_id
+LEFT JOIN likes
+ON users.id = likes.user_id
+LEFT JOIN media
+ON users.id = media.user_id
+GROUP BY users.id
+ORDER BY total_messages, total_likes, activity
+LIMIT 10;
+
+-- По моему мнению в запрос нужно добавить также сортировку по количеству сообщений
+-- и по количеству проставленных лайков, существует сортировка только по количеству
+-- медиа файлов.
+
+-- В качестве изменений можно ввести дополнительные поля в таблицы messages,
+-- likes, media, которые хранили бы данные о количестве отправленных сообщений,
+-- поставленных лайков, хранимых файлов соответственно, для каждого пользователя.
+-- А затем создать таблицу активности пользователей, которая содержала бы поля,
+-- являющимися внешними ключами к созданным полям в таблицах messages, likes и 
+-- media. Таким образом, не пришлось бы обращаться к нескольким таблицам и
+-- высчитывать при каждом запросе по новой количество рассматриваемых параметров.
